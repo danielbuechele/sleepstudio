@@ -37,6 +37,11 @@ function App() {
     setSound(effectiveSound);
   }, [effectiveSound, setSound]);
 
+  // Sync body background so iOS safe area behind home indicator matches
+  useEffect(() => {
+    document.body.style.backgroundColor = effectiveColor;
+  }, [effectiveColor]);
+
   // Keep screen awake
   useEffect(() => {
     let wakeLock: WakeLockSentinel | null = null;
