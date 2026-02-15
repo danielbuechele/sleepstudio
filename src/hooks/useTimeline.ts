@@ -20,13 +20,14 @@ function saveEntries(entries: TimelineEntry[]) {
 
 export function useTimeline() {
   const [entries, setEntries] = useState<TimelineEntry[]>(loadEntries);
-  const [activeId, setActiveId] = useState<string | null>(() => findActiveEntry(loadEntries())?.id ?? null);
+  const [activeEntry, setActiveEntry] = useState<TimelineEntry | null>(() => findActiveEntry(loadEntries()));
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const entriesRef = useRef(entries);
   entriesRef.current = entries;
 
-  // Derive activeEntry from entries + activeId so it's always a fresh reference
-  const activeEntry = entries.find(e => e.id === activeId) ?? null;
+  const activate = useCallback((entry: TimelineEntry) => {
+    setActiveEntry({ ...entry }); // spread ensures new reference so React always re-renders
+  }, []);
 
   const scheduleNext = useCallback((currentEntries: TimelineEntry[]) => {
     if (timeoutRef.current !== null) {
@@ -38,10 +39,12 @@ export function useTimeline() {
     if (!next) return;
 
     timeoutRef.current = setTimeout(() => {
-      setActiveId(next.entry.id);
-      scheduleNext(entriesRef.current);
+      const fresh = entriesRef.current;
+      const entry = fresh.find(e => e.id === next.entry.id);
+      activate(entry ?? next.entry);
+      scheduleNext(fresh);
     }, next.msUntil);
-  }, []);
+  }, [activate]);
 
   // Persist and reschedule on entries change
   useEffect(() => {
@@ -56,13 +59,14 @@ export function useTimeline() {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        setActiveId(findActiveEntry(entries)?.id ?? null);
+        const entry = findActiveEntry(entries);
+        if (entry) activate(entry);
         scheduleNext(entries);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [entries, scheduleNext]);
+  }, [entries, scheduleNext, activate]);
 
   const addEntry = useCallback((entry: Omit<TimelineEntry, 'id'>) => {
     setEntries(prev => [...prev, { ...entry, id: crypto.randomUUID() }]);

@@ -10,16 +10,18 @@ const DEFAULT_COLOR = '#000000';
 
 function App() {
   const { entries, activeEntry, addEntry, updateEntry, removeEntry } = useTimeline();
-  const { setSound } = useAudio();
+  const { setSound, unlock } = useAudio();
 
   const [overrideColor, setOverrideColor] = useState<string | undefined>();
-  const [overrideSound, setOverrideSound] = useState<string | null | undefined>();
+  const [overrideSound, setOverrideSound] = useState<string | null | undefined>(undefined);
   const [trackedActiveId, setTrackedActiveId] = useState<string | null>(activeEntry?.id ?? null);
   const [showConfig, setShowConfig] = useState(false);
+  const [started, setStarted] = useState(false);
 
   // Clear overrides synchronously when active entry changes (React recommended pattern)
-  if (activeEntry?.id !== trackedActiveId) {
-    setTrackedActiveId(activeEntry?.id ?? null);
+  const activeId = activeEntry?.id ?? null;
+  if (activeId !== trackedActiveId) {
+    setTrackedActiveId(activeId);
     setOverrideColor(undefined);
     setOverrideSound(undefined);
   }
@@ -27,10 +29,19 @@ function App() {
   const effectiveColor = overrideColor ?? activeEntry?.color ?? DEFAULT_COLOR;
   const effectiveSound = overrideSound !== undefined ? overrideSound : (activeEntry?.sound ?? null);
 
-  // Drive audio from effective sound
+  // Drive audio from effective sound (only after user starts the app)
   useEffect(() => {
-    setSound(effectiveSound);
-  }, [effectiveSound, setSound]);
+    if (started) setSound(effectiveSound);
+  }, [effectiveSound, setSound, started]);
+
+  const handleStart = () => {
+    if (effectiveSound) {
+      setSound(effectiveSound);
+    } else {
+      unlock();
+    }
+    setStarted(true);
+  };
 
   // Sync body background so iOS safe area behind home indicator matches
   useEffect(() => {
@@ -60,29 +71,39 @@ function App() {
 
   return (
     <div className={`app ${isLightColor(effectiveColor) ? 'light' : ''}`} style={{ backgroundColor: effectiveColor }}>
-      <button
-        className="settings-btn"
-        onClick={() => setShowConfig(true)}
-        title="Settings"
-      >
-        &#9881;
-      </button>
+      {!started ? (
+        <button className="start-btn" onClick={handleStart} title="Start">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5,3 19,12 5,21" />
+          </svg>
+        </button>
+      ) : (
+        <>
+          <button
+            className="settings-btn"
+            onClick={() => setShowConfig(true)}
+            title="Settings"
+          >
+            &#9881;
+          </button>
 
-      <QuickControls
-        currentColor={effectiveColor}
-        currentSound={effectiveSound}
-        onColorChange={setOverrideColor}
-        onSoundChange={setOverrideSound}
-      />
+          <QuickControls
+            currentColor={effectiveColor}
+            currentSound={effectiveSound}
+            onColorChange={setOverrideColor}
+            onSoundChange={setOverrideSound}
+          />
 
-      {showConfig && (
-        <ConfigPanel
-          entries={entries}
-          onAdd={addEntry}
-          onUpdate={updateEntry}
-          onRemove={removeEntry}
-          onClose={() => setShowConfig(false)}
-        />
+          {showConfig && (
+            <ConfigPanel
+              entries={entries}
+              onAdd={addEntry}
+              onUpdate={updateEntry}
+              onRemove={removeEntry}
+              onClose={() => setShowConfig(false)}
+            />
+          )}
+        </>
       )}
     </div>
   );
