@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTimeline } from './hooks/useTimeline';
 import { useAudio } from './hooks/useAudio';
+import { isLightColor } from './utils';
 import { QuickControls } from './components/QuickControls';
 import { ConfigPanel } from './components/ConfigPanel';
 import './App.css';
@@ -36,8 +37,29 @@ function App() {
     setSound(effectiveSound);
   }, [effectiveSound, setSound]);
 
+  // Keep screen awake
+  useEffect(() => {
+    let wakeLock: WakeLockSentinel | null = null;
+    const request = async () => {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+      } catch {
+        // WakeLock not supported or failed
+      }
+    };
+    request();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') request();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      wakeLock?.release();
+    };
+  }, []);
+
   return (
-    <div className="app" style={{ backgroundColor: effectiveColor }}>
+    <div className={`app ${isLightColor(effectiveColor) ? 'light' : ''}`} style={{ backgroundColor: effectiveColor }}>
       <button
         className="settings-btn"
         onClick={() => setShowConfig(true)}

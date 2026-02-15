@@ -45,6 +45,14 @@ export function normalizeEntry(entry: TimelineEntry): TimelineEntry {
   };
 }
 
+export function isLightColor(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  // Relative luminance formula
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150;
+}
+
 export function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
