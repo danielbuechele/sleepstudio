@@ -20,10 +20,13 @@ function saveEntries(entries: TimelineEntry[]) {
 
 export function useTimeline() {
   const [entries, setEntries] = useState<TimelineEntry[]>(loadEntries);
-  const [activeEntry, setActiveEntry] = useState<TimelineEntry | null>(() => findActiveEntry(loadEntries()));
+  const [activeId, setActiveId] = useState<string | null>(() => findActiveEntry(loadEntries())?.id ?? null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const entriesRef = useRef<TimelineEntry[]>(entries);
+  const entriesRef = useRef(entries);
   entriesRef.current = entries;
+
+  // Derive activeEntry from entries + activeId so it's always a fresh reference
+  const activeEntry = entries.find(e => e.id === activeId) ?? null;
 
   const scheduleNext = useCallback((currentEntries: TimelineEntry[]) => {
     if (timeoutRef.current !== null) {
@@ -35,11 +38,8 @@ export function useTimeline() {
     if (!next) return;
 
     timeoutRef.current = setTimeout(() => {
-      // Use fresh entries from ref to get up-to-date entry data
-      const freshEntries = entriesRef.current;
-      const freshEntry = freshEntries.find(e => e.id === next.entry.id);
-      setActiveEntry(freshEntry ?? next.entry);
-      scheduleNext(freshEntries);
+      setActiveId(next.entry.id);
+      scheduleNext(entriesRef.current);
     }, next.msUntil);
   }, []);
 
@@ -47,19 +47,16 @@ export function useTimeline() {
   useEffect(() => {
     saveEntries(entries);
     scheduleNext(entries);
-
     return () => {
-      if (timeoutRef.current !== null) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
     };
   }, [entries, scheduleNext]);
 
-  // Re-sync when app regains focus (timeouts can drift over multi-day spans)
+  // Re-sync when app regains focus
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        setActiveEntry(findActiveEntry(entries));
+        setActiveId(findActiveEntry(entries)?.id ?? null);
         scheduleNext(entries);
       }
     };

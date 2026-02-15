@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useTimeline } from './hooks/useTimeline';
 import { useAudio } from './hooks/useAudio';
 import { isLightColor } from './utils';
@@ -12,25 +12,20 @@ function App() {
   const { entries, activeEntry, addEntry, updateEntry, removeEntry } = useTimeline();
   const { setSound } = useAudio();
 
-  const [manualColor, setManualColor] = useState<string | undefined>(undefined);
-  const [manualSound, setManualSound] = useState<string | null | undefined>(undefined);
+  const [overrideColor, setOverrideColor] = useState<string | undefined>();
+  const [overrideSound, setOverrideSound] = useState<string | null | undefined>();
+  const [trackedActiveId, setTrackedActiveId] = useState<string | null>(activeEntry?.id ?? null);
   const [showConfig, setShowConfig] = useState(false);
 
-  const prevActiveIdRef = useRef<string | null>(null);
+  // Clear overrides synchronously when active entry changes (React recommended pattern)
+  if (activeEntry?.id !== trackedActiveId) {
+    setTrackedActiveId(activeEntry?.id ?? null);
+    setOverrideColor(undefined);
+    setOverrideSound(undefined);
+  }
 
-  // Clear manual overrides when the active entry changes
-  useEffect(() => {
-    if (activeEntry && activeEntry.id !== prevActiveIdRef.current) {
-      if (prevActiveIdRef.current !== null) {
-        setManualColor(undefined);
-        setManualSound(undefined);
-      }
-      prevActiveIdRef.current = activeEntry.id;
-    }
-  }, [activeEntry]);
-
-  const effectiveColor = manualColor ?? activeEntry?.color ?? DEFAULT_COLOR;
-  const effectiveSound = manualSound !== undefined ? manualSound : (activeEntry?.sound ?? null);
+  const effectiveColor = overrideColor ?? activeEntry?.color ?? DEFAULT_COLOR;
+  const effectiveSound = overrideSound !== undefined ? overrideSound : (activeEntry?.sound ?? null);
 
   // Drive audio from effective sound
   useEffect(() => {
@@ -76,8 +71,8 @@ function App() {
       <QuickControls
         currentColor={effectiveColor}
         currentSound={effectiveSound}
-        onColorChange={setManualColor}
-        onSoundChange={setManualSound}
+        onColorChange={setOverrideColor}
+        onSoundChange={setOverrideSound}
       />
 
       {showConfig && (
