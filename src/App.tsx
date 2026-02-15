@@ -73,8 +73,8 @@ function App() {
     <div className={`app ${isLightColor(effectiveColor) ? 'light' : ''}`} style={{ backgroundColor: effectiveColor }}>
       {!started ? (
         <button className="start-btn" onClick={handleStart} title="Start">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
-            <polygon points="5,3 19,12 5,21" />
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+            <polygon points="7,4 20,12 7,20" />
           </svg>
         </button>
       ) : (
