@@ -2,6 +2,7 @@ html, body, #root {
   margin: 0;
   padding: 0;
   height: 100%;
+  min-height: 100dvh;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -9,6 +10,7 @@ html, body, #root {
 .app {
   width: 100%;
   height: 100%;
+  min-height: 100dvh;
   position: relative;
   transition: background-color 2s ease;
 }
@@ -16,8 +18,8 @@ html, body, #root {
 /* Settings button */
 .settings-btn {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: calc(20px + env(safe-area-inset-top));
+  right: calc(20px + env(safe-area-inset-right));
   background: rgba(255, 255, 255, 0.15);
   border: none;
   color: rgba(255, 255, 255, 0.8);
@@ -40,7 +42,7 @@ html, body, #root {
 /* Quick controls */
 .quick-controls {
   position: absolute;
-  bottom: 40px;
+  bottom: calc(40px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
