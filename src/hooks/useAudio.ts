@@ -23,7 +23,7 @@ export function useAudio() {
 
     const audio = audioRef.current;
     audio.pause();
-    audio.src = `/sounds/${filename}`;
+    audio.src = `${import.meta.env.BASE_URL}sounds/${filename}`;
     audio.loop = true;
 
     audio.play().catch(() => {
