@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { AVAILABLE_SOUNDS, COLOR_PALETTE } from '../utils';
+import { SoundIcon } from './SoundIcon';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 interface QuickControlsProps {
   currentColor: string;
@@ -11,9 +13,16 @@ interface QuickControlsProps {
 export function QuickControls({ currentColor, currentSound, onColorChange, onSoundChange }: QuickControlsProps) {
   const [showColorGrid, setShowColorGrid] = useState(false);
   const [showSoundMenu, setShowSoundMenu] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useClickOutside(
+    showColorGrid || showSoundMenu,
+    () => { setShowColorGrid(false); setShowSoundMenu(false); },
+    ref,
+  );
 
   return (
-    <div className="quick-controls">
+    <div className="quick-controls" ref={ref}>
       <div className="color-control">
         <button
           className="control-btn"
@@ -42,7 +51,7 @@ export function QuickControls({ currentColor, currentSound, onColorChange, onSou
           onClick={() => { setShowSoundMenu(prev => !prev); setShowColorGrid(false); }}
           title="Select sound"
         >
-          {currentSound ? '\u266B' : '\u2715'}
+          <SoundIcon sound={currentSound} size={30} />
         </button>
         {showSoundMenu && (
           <div className="sound-menu">
@@ -50,7 +59,8 @@ export function QuickControls({ currentColor, currentSound, onColorChange, onSou
               className={`sound-option ${currentSound === null ? 'active' : ''}`}
               onClick={() => { onSoundChange(null); setShowSoundMenu(false); }}
             >
-              No sound
+              <SoundIcon sound={null} size={22} />
+              <span>Mute</span>
             </button>
             {AVAILABLE_SOUNDS.map(s => (
               <button
@@ -58,7 +68,8 @@ export function QuickControls({ currentColor, currentSound, onColorChange, onSou
                 className={`sound-option ${currentSound === s ? 'active' : ''}`}
                 onClick={() => { onSoundChange(s); setShowSoundMenu(false); }}
               >
-                {s.replace('.m4a', '').replace(/_/g, ' ')}
+                <SoundIcon sound={s} size={22} />
+                <span>{s.replace('.m4a', '').replace(/_/g, ' ')}</span>
               </button>
             ))}
           </div>

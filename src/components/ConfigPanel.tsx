@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import type { TimelineEntry } from '../utils';
-import { AVAILABLE_SOUNDS, COLOR_PALETTE, timeToMinutes } from '../utils';
+import { AVAILABLE_SOUNDS, ALL_DAYS, DAY_LABELS, COLOR_PALETTE, timeToMinutes, getDaysLabel } from '../utils';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 interface ConfigPanelProps {
   entries: TimelineEntry[];
@@ -15,21 +16,53 @@ interface PickerPos { top: number; left: number }
 export function ConfigPanel({ entries, onAdd, onUpdate, onRemove, onClose }: ConfigPanelProps) {
   const sorted = [...entries].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   const [colorPickerFor, setColorPickerFor] = useState<string | null>(null);
+  const [daysPickerFor, setDaysPickerFor] = useState<string | null>(null);
   const [pickerPos, setPickerPos] = useState<PickerPos>({ top: 0, left: 0 });
-  const btnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [daysPickerPos, setDaysPickerPos] = useState<PickerPos>({ top: 0, left: 0 });
+  const colorBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const daysBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const colorDropdownRef = useRef<HTMLDivElement>(null);
+  const daysDropdownRef = useRef<HTMLDivElement>(null);
 
-  const openPicker = useCallback((id: string) => {
+  useClickOutside(
+    colorPickerFor !== null,
+    () => setColorPickerFor(null),
+    colorDropdownRef,
+  );
+
+  useClickOutside(
+    daysPickerFor !== null,
+    () => setDaysPickerFor(null),
+    daysDropdownRef,
+  );
+
+  const openColorPicker = useCallback((id: string) => {
+    setDaysPickerFor(null);
     if (colorPickerFor === id) {
       setColorPickerFor(null);
       return;
     }
-    const btn = btnRefs.current.get(id);
+    const btn = colorBtnRefs.current.get(id);
     if (btn) {
       const rect = btn.getBoundingClientRect();
       setPickerPos({ top: rect.bottom + 4, left: rect.left + rect.width / 2 });
     }
     setColorPickerFor(id);
   }, [colorPickerFor]);
+
+  const openDaysPicker = useCallback((id: string) => {
+    setColorPickerFor(null);
+    if (daysPickerFor === id) {
+      setDaysPickerFor(null);
+      return;
+    }
+    const btn = daysBtnRefs.current.get(id);
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      setDaysPickerPos({ top: rect.bottom + 4, left: rect.left + rect.width / 2 });
+    }
+    setDaysPickerFor(id);
+  }, [daysPickerFor]);
 
   return (
     <div className="config-overlay" onClick={onClose}>
@@ -44,29 +77,38 @@ export function ConfigPanel({ entries, onAdd, onUpdate, onRemove, onClose }: Con
             <p className="config-empty">No entries yet. Add one below.</p>
           )}
           {sorted.map(entry => (
-            <div key={entry.id} className="config-entry">
-              <input
-                type="time"
-                value={entry.time}
-                onChange={e => onUpdate(entry.id, { time: e.target.value })}
-              />
+            <div key={entry.id} className="config-entry-card">
+              <div className="config-entry">
+                <input
+                  type="time"
+                  value={entry.time}
+                  onChange={e => onUpdate(entry.id, { time: e.target.value })}
+                />
+                <button
+                  ref={el => { if (el) colorBtnRefs.current.set(entry.id, el); }}
+                  className="config-color-btn"
+                  style={{ backgroundColor: entry.color }}
+                  onClick={() => openColorPicker(entry.id)}
+                />
+                <select
+                  value={entry.sound ?? ''}
+                  onChange={e => onUpdate(entry.id, { sound: e.target.value || null })}
+                >
+                  <option value="">No sound</option>
+                  {AVAILABLE_SOUNDS.map(s => (
+                    <option key={s} value={s}>{s.replace('.m4a', '').replace(/_/g, ' ')}</option>
+                  ))}
+                </select>
+                <button className="delete-btn" onClick={() => onRemove(entry.id)}>
+                  &times;
+                </button>
+              </div>
               <button
-                ref={el => { if (el) btnRefs.current.set(entry.id, el); }}
-                className="config-color-btn"
-                style={{ backgroundColor: entry.color }}
-                onClick={() => openPicker(entry.id)}
-              />
-              <select
-                value={entry.sound ?? ''}
-                onChange={e => onUpdate(entry.id, { sound: e.target.value || null })}
+                ref={el => { if (el) daysBtnRefs.current.set(entry.id, el); }}
+                className="days-btn"
+                onClick={() => openDaysPicker(entry.id)}
               >
-                <option value="">No sound</option>
-                {AVAILABLE_SOUNDS.map(s => (
-                  <option key={s} value={s}>{s.replace('.m4a', '').replace(/_/g, ' ')}</option>
-                ))}
-              </select>
-              <button className="delete-btn" onClick={() => onRemove(entry.id)}>
-                &times;
+                {getDaysLabel(entry.days)}
               </button>
             </div>
           ))}
@@ -74,7 +116,7 @@ export function ConfigPanel({ entries, onAdd, onUpdate, onRemove, onClose }: Con
 
         <button
           className="add-btn"
-          onClick={() => onAdd({ time: '22:00', color: '#1a1a2e', sound: null })}
+          onClick={() => onAdd({ time: '22:00', color: '#000000', sound: null, days: ALL_DAYS })}
         >
           + Add entry
         </button>
@@ -82,6 +124,7 @@ export function ConfigPanel({ entries, onAdd, onUpdate, onRemove, onClose }: Con
 
       {colorPickerFor && (
         <div
+          ref={colorDropdownRef}
           className="config-color-grid"
           style={{ top: pickerPos.top, left: pickerPos.left }}
           onClick={e => e.stopPropagation()}
@@ -95,6 +138,35 @@ export function ConfigPanel({ entries, onAdd, onUpdate, onRemove, onClose }: Con
                 style={{ backgroundColor: color }}
                 onClick={() => { onUpdate(colorPickerFor, { color }); setColorPickerFor(null); }}
               />
+            );
+          })}
+        </div>
+      )}
+
+      {daysPickerFor && (
+        <div
+          ref={daysDropdownRef}
+          className="config-days-dropdown"
+          style={{ top: daysPickerPos.top, left: daysPickerPos.left }}
+          onClick={e => e.stopPropagation()}
+        >
+          {DAY_LABELS.map((label, dayIndex) => {
+            const entry = entries.find(e => e.id === daysPickerFor);
+            if (!entry) return null;
+            const isActive = entry.days.includes(dayIndex);
+            return (
+              <button
+                key={dayIndex}
+                className={`day-btn ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  const newDays = isActive
+                    ? entry.days.filter(d => d !== dayIndex)
+                    : [...entry.days, dayIndex].sort();
+                  onUpdate(entry.id, { days: newDays });
+                }}
+              >
+                {label}
+              </button>
             );
           })}
         </div>

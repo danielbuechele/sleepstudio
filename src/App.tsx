@@ -5,7 +5,7 @@ import { QuickControls } from './components/QuickControls';
 import { ConfigPanel } from './components/ConfigPanel';
 import './App.css';
 
-const DEFAULT_COLOR = '#1a1a2e';
+const DEFAULT_COLOR = '#000000';
 
 function App() {
   const { entries, activeEntry, addEntry, updateEntry, removeEntry } = useTimeline();
